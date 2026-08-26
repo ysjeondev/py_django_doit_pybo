@@ -6,7 +6,18 @@
 
     <form method="post">
         {% csrf_token %}
-
+        <!-- 오류 표시 Start-->
+         {% if form.errors %}
+            <div class ="alert alert-danger" role="alert">
+                {% for field in form %}
+                    {% if field.errors%}
+                        <strong>{{field.label}} </strong>
+                        {{field.errors}}
+                    {% endif %}
+                {%endfor%}
+            </div>
+        {% endif %}
+        <!-- 오류표시 End-->
         <div class="mb-3">
             <label for="subject" class="form-label">제목</label>
 
@@ -23,7 +34,8 @@
             <textarea class="form-control"
                       name="content"
                       id="content"
-                      rows="10">{{ form.content.value|default_if_none:'' }}</textarea>
+                      rows="10">{{ form.content.value|default_if_none:'' }}
+            </textarea>
         </div>
 
         <button type="submit" class="btn btn-primary">
