@@ -3,7 +3,7 @@ from .models import Question
 from django.utils import timezone
 from .forms import QuestionForm, AnswerForm
 from django.core.paginator import Paginator
-
+from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 def index(request):
@@ -36,41 +36,34 @@ def detail(request,question_id):
     context = { 'question':question}
     return render(request,'pybo/question_detail.html', context)
 
+@login_required
 def answer_create(request, question_id):
-    # URL로 전달받은 질문 번호로 질문을 조회한다.
     question = get_object_or_404(
         Question,
         pk=question_id
     )
 
     if request.method == 'POST':
-        # 전송된 답변 내용을 폼에 담는다.
         form = AnswerForm(request.POST)
 
-        # 입력값이 정상적인 경우
         if form.is_valid():
-            # 데이터베이스 저장을 잠시 보류한다.
             answer = form.save(commit=False)
 
-            # 답변과 질문을 연결한다.
+            # 현재 로그인 사용자를 작성자로 지정
+            answer.author = request.user
+
             answer.question = question
-
-            # 답변 작성 시각을 저장한다.
             answer.create_date = timezone.now()
-
-            # 데이터베이스에 최종 저장한다.
             answer.save()
 
-            # 질문 상세 화면으로 이동한다.
             return redirect(
                 'pybo:detail',
                 question_id=question.id
             )
+
     else:
-        # GET 요청일 때 빈 답변 폼을 만든다.
         form = AnswerForm()
 
-    # 입력 오류가 있거나 GET 요청이면 상세 화면을 출력한다.
     context = {
         'question': question,
         'form': form
@@ -82,20 +75,33 @@ def answer_create(request, question_id):
         context
     )
 
+@login_required
 def question_create(request):
-    #pybo 질문 등록
-    
     if request.method == 'POST':
         form = QuestionForm(request.POST)
-    
+
         if form.is_valid():
             question = form.save(commit=False)
+
+            # 현재 로그인 사용자를 작성자로 지정
+            question.author = request.user
+
             question.create_date = timezone.now()
             question.save()
+
             return redirect('pybo:index')
+
     else:
-        form =QuestionForm()
-    context ={'form':form}
-    return render(request, 'pybo/question_form.html', context)
+        form = QuestionForm()
+
+    context = {
+        'form': form
+    }
+
+    return render(
+        request,
+        'pybo/question_form.html',
+        context
+    )
 
 
