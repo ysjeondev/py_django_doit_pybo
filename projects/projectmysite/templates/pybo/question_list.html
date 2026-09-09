@@ -5,33 +5,40 @@
     <table class="table">
         <thead>
             <tr class="thead-dark">
-                <th>번호</th>
-                <th>제목</th>
-                <th>작성일시</th>
+                <th style="width: 10%;">번호</th>
+                <th style="width: 45%;">제목</th>
+                <th style="width: 15%;">글쓴이</th>
+                <th style="width: 30%;">작성일시</th>
             </tr>
         </thead>
-<tbody>
+    <tbody>
         {% if question_list %}
-{% for question in question_list %}
+            {% for question in question_list %}
             <tr>
                 <td>{{ forloop.counter }}</td>
-<td>
+                <td>
                     <a href="{% url 'pybo:detail' question.id %}">
                         {{ question.subject }}
                     </a>
-<!-- 질문에 달린 답변 개수 -->
+                    <!-- 질문에 달린 답변 개수 -->
                     {% if question.answer_set.count > 0 %}
                     <span class="text-danger small mx-2">
                         {{ question.answer_set.count }}
                     </span>
                     {% endif %}
                 </td>
-<td>{{ question.create_date }}</td>
+                <!-- 글쓴이 -->
+                <td>
+                    {{ question.author.username }}
+                </td>
+
+                <!-- 작성일시 -->
+                <td>{{ question.create_date }}</td>
             </tr>
             {% endfor %}
-{% else %}
+        {% else %}
             <tr>
-                <td colspan="3">
+                <td colspan="4">
                     질문이 없습니다.
                 </td>
             </tr>
