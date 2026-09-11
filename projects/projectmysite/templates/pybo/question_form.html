@@ -2,7 +2,14 @@
 
 {% block content %}
 <div class="container my-3">
-    <h5 class="my-3 border-bottom pb-2">질문등록</h5>
+    <h5 class="my-3 border-bottom pb-2">
+        {% if form.instance.pk %}
+            질문 수정
+        {% else %}
+            질문 등록
+        {% endif %}
+
+    </h5>
 
     <form method="post">
         {% csrf_token %}
@@ -39,7 +46,11 @@
         </div>
 
         <button type="submit" class="btn btn-primary">
-            저장하기
+            {% if form.instance.pk %}
+                수정 완료
+            {% else %}
+                저장하기
+            {% endif %}
         </button>
     </form>
 </div>

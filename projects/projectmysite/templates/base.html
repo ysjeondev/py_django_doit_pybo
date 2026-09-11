@@ -16,6 +16,20 @@
 <!-- 내비게이션바 -->
 {% include "navbar.html" %}
 
+<!-- views.py에서 messages.error()로 전달한
+     일회성 안내 메시지를 출력한다. -->
+{% if messages %}
+<div class="container my-3">
+
+    {% for message in messages %}
+    <div class="alert alert-danger"
+         role="alert">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
 <!-- 화면별 내용 -->
 {% block content %}
 {% endblock %}
