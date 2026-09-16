@@ -6,7 +6,7 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 
 from .models import Question, Answer
-from .forms import QuestionForm, AnswerForm
+from .forms import QuestionForm, AnswerForm, CommentForm, Comment
 
 # Create your views here.
 def index(request):
@@ -316,6 +316,267 @@ def answer_delete(request, answer_id):
     answer.delete()
 
     # 삭제 완료 후 원래 질문의 상세 화면으로 이동한다.
+    return redirect(
+        'pybo:detail',
+        question_id=question_id
+    )
+
+@login_required
+def comment_create_question(request, question_id):
+    # 댓글을 작성할 질문을 조회한다.
+    question = get_object_or_404(
+        Question,
+        pk=question_id
+    )
+    if request.method == 'POST':
+        # 사용자가 입력한 댓글 내용을 CommentForm에 전달한다.
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            # 아직 작성자와 질문을 지정하지 않았으므로
+            # 데이터베이스 저장을 잠시 보류한다.
+            comment = form.save(commit=False)
+            # 현재 로그인한 사용자를 댓글 작성자로 지정한다.
+            comment.author = request.user
+            # 이 댓글이 어떤 질문에 달린 댓글인지 지정한다.
+            comment.question = question
+            # 댓글 최초 작성 시간을 저장한다.
+            comment.create_date = timezone.now()
+            # 모든 필수값을 지정한 후 데이터베이스에 저장한다.
+            comment.save()
+            return redirect(
+                'pybo:detail',
+                question_id=question.id
+            )
+    else:
+        # 댓글 등록 화면을 처음 열 때 빈 폼을 생성한다.
+        form = CommentForm()
+        context = {
+        'form': form,
+        'question_id': question.id,
+        'form_title': '질문 댓글 등록',
+    }
+    return render(
+        request,
+        'pybo/comment_form.html',
+        context
+    )
+
+@login_required
+def comment_create_answer(request, answer_id):
+    # 댓글을 작성할 답변을 조회한다.
+    answer = get_object_or_404(
+        Answer,
+        pk=answer_id
+    )
+
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+
+        if form.is_valid():
+            comment = form.save(commit=False)
+
+            # 현재 로그인 사용자를 댓글 작성자로 지정한다.
+            comment.author = request.user
+
+            # 질문 댓글이 아니라 답변 댓글이므로
+            # answer 필드에 현재 답변을 지정한다.
+            comment.answer = answer
+
+            comment.create_date = timezone.now()
+            comment.save()
+
+            # 답변은 질문 상세 화면에 표시되므로
+            # 답변이 속한 질문 상세 화면으로 이동한다.
+            return redirect(
+                'pybo:detail',
+                question_id=answer.question.id
+            )
+
+    else:
+        form = CommentForm()
+
+    context = {
+        'form': form,
+        'question_id': answer.question.id,
+        'form_title': '답변 댓글 등록',
+    }
+
+    return render(
+        request,
+        'pybo/comment_form.html',
+        context
+    )
+    
+@login_required
+def comment_modify_question(request, comment_id):
+    # 질문에 연결된 댓글만 조회한다.
+    #
+    # question__isnull=False 조건으로
+    # 답변 댓글이 이 View에서 수정되는 것을 방지한다.
+    comment = get_object_or_404(
+        Comment,
+        pk=comment_id,
+        question__isnull=False
+    )
+
+    # 현재 사용자와 댓글 작성자가 다르면 수정하지 못하게 한다.
+    if request.user != comment.author:
+        messages.error(
+            request,
+            '댓글 수정 권한이 없습니다.'
+        )
+
+        return redirect(
+            'pybo:detail',
+            question_id=comment.question.id
+        )
+
+    if request.method == 'POST':
+        # instance=comment를 지정해 새 댓글을 만드는 것이 아니라
+        # 기존 댓글의 내용을 수정한다.
+        form = CommentForm(
+            request.POST,
+            instance=comment
+        )
+
+        if form.is_valid():
+            comment = form.save(commit=False)
+
+            # 댓글이 수정된 시간을 기록한다.
+            comment.modify_date = timezone.now()
+            comment.save()
+
+            return redirect(
+                'pybo:detail',
+                question_id=comment.question.id
+            )
+
+    else:
+        # 기존 댓글 내용을 수정 폼에 채운다.
+        form = CommentForm(instance=comment)
+
+    context = {
+        'form': form,
+        'question_id': comment.question.id,
+        'form_title': '질문 댓글 수정',
+    }
+
+    return render(
+        request,
+        'pybo/comment_form.html',
+        context
+    )
+
+@login_required
+def comment_modify_answer(request, comment_id):
+    # 답변에 연결된 댓글만 조회한다.
+    comment = get_object_or_404(
+        Comment,
+        pk=comment_id,
+        answer__isnull=False
+    )
+
+    if request.user != comment.author:
+        messages.error(
+            request,
+            '댓글 수정 권한이 없습니다.'
+        )
+
+        return redirect(
+            'pybo:detail',
+            question_id=comment.answer.question.id
+        )
+
+    if request.method == 'POST':
+        form = CommentForm(
+            request.POST,
+            instance=comment
+        )
+
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.modify_date = timezone.now()
+            comment.save()
+
+            return redirect(
+                'pybo:detail',
+                question_id=comment.answer.question.id
+            )
+
+    else:
+        form = CommentForm(instance=comment)
+
+    context = {
+        'form': form,
+        'question_id': comment.answer.question.id,
+        'form_title': '답변 댓글 수정',
+    }
+
+    return render(
+        request,
+        'pybo/comment_form.html',
+        context
+    )
+
+@login_required
+@require_POST
+def comment_delete_question(request, comment_id):
+    # 질문에 연결된 댓글만 조회한다.
+    comment = get_object_or_404(
+        Comment,
+        pk=comment_id,
+        question__isnull=False
+    )
+
+    if request.user != comment.author:
+        messages.error(
+            request,
+            '댓글 삭제 권한이 없습니다.'
+        )
+
+        return redirect(
+            'pybo:detail',
+            question_id=comment.question.id
+        )
+
+    # 댓글을 삭제한 후 돌아갈 질문 번호를 먼저 보관한다.
+    question_id = comment.question.id
+
+    # 선택한 댓글 한 건만 삭제한다.
+    comment.delete()
+
+    return redirect(
+        'pybo:detail',
+        question_id=question_id
+    )
+
+@login_required
+@require_POST
+def comment_delete_answer(request, comment_id):
+    # 답변에 연결된 댓글만 조회한다.
+    comment = get_object_or_404(
+        Comment,
+        pk=comment_id,
+        answer__isnull=False
+    )
+
+    if request.user != comment.author:
+        messages.error(
+            request,
+            '댓글 삭제 권한이 없습니다.'
+        )
+
+        return redirect(
+            'pybo:detail',
+            question_id=comment.answer.question.id
+        )
+
+    # 삭제 후 질문 상세 화면으로 돌아가기 위해
+    # 답변이 속한 질문 번호를 미리 보관한다.
+    question_id = comment.answer.question.id
+
+    comment.delete()
+
     return redirect(
         'pybo:detail',
         question_id=question_id

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-3">
+
+    <!-- View에서 전달한 등록 또는 수정 제목을 출력한다. -->
+    <h5 class="my-3 border-bottom pb-2">
+        {{ form_title }}
+    </h5>
+
+    <!-- action을 생략하면 현재 접속한 URL로 POST 요청한다.
+         따라서 등록과 수정에서 같은 템플릿을 재사용할 수 있다. -->
+    <form method="post">
+
+        {% csrf_token %}
+
+        {% include "form_errors.html" %}
+
+        <div class="form-group">
+            <label for="content">
+                댓글 내용
+            </label>
+
+            <!-- 수정 화면에서는 기존 댓글 내용이 출력되고,
+                 등록 화면에서는 빈 문자열이 출력된다. -->
+            <textarea name="content"
+                      id="content"
+                      class="form-control"
+                      rows="5">{{ form.content.value|default_if_none:'' }}</textarea>
+        </div>
+
+        <button type="submit"
+                class="btn btn-primary">
+            저장하기
+        </button>
+
+        <!-- 저장하지 않고 원래 질문 상세 화면으로 돌아간다. -->
+        <a href="{% url 'pybo:detail' question_id %}"
+           class="btn btn-secondary ml-2">
+            취소
+        </a>
+
+    </form>
+
+</div>
+{% endblock %}

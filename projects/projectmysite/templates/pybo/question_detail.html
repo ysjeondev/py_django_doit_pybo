@@ -1,36 +1,47 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
+<!-- =========================================================
+     전체 상세 화면 영역
+     질문, 질문 댓글, 답변, 답변 댓글, 답변 등록 폼을 포함한다.
+========================================================== -->
 <div class="container my-3">
 
-    <!-- =====================================================
-         질문 영역
-         ===================================================== -->
 
-    <!-- 현재 상세 화면에서 조회한 질문 제목을 출력한다. -->
+    <!-- =====================================================
+         1. 질문 제목 영역
+    ====================================================== -->
     <h2 class="border-bottom py-2">
         {{ question.subject }}
     </h2>
 
+
+    <!-- =====================================================
+         2. 질문 카드 영역 시작
+         질문 내용, 작성자, 작성일, 수정·삭제 버튼,
+         질문 댓글을 하나의 카드 안에 표시한다.
+    ====================================================== -->
     <div class="card my-3">
         <div class="card-body">
 
-            <!-- 질문 내용에 입력된 줄바꿈을 그대로 유지한다. -->
+            <!-- 질문 본문 내용 -->
             <div class="card-text"
                  style="white-space: pre-line;">
                 {{ question.content }}
             </div>
 
-            <!-- 질문 작성자와 질문 작성일시를 오른쪽에 표시한다. -->
+
+            <!-- 질문 작성자와 작성일시 -->
             <div class="d-flex justify-content-end">
                 <div class="badge badge-light p-2">
 
-                    <!-- Question.author로 연결된
-                         Django User 객체의 username을 출력한다. -->
+                    <!-- 질문 작성자 이름 -->
                     <div class="mb-2">
                         {{ question.author.username }}
                     </div>
 
+                    <!-- 질문 작성일시 -->
                     <div>
                         {{ question.create_date }}
                     </div>
@@ -38,84 +49,174 @@
                 </div>
             </div>
 
-            <!-- 현재 로그인 사용자가 질문 작성자와 같은 경우에만
-                 질문 수정·삭제 버튼을 표시한다.
 
-                 이 코드는 답변 반복문 밖에 있어야 한다.
-                 질문 하나에 대한 버튼이기 때문이다. -->
+            <!-- =================================================
+                 2-1. 질문 수정·삭제 버튼 영역
+
+                 현재 로그인한 사용자와 질문 작성자가 같을 때만
+                 질문 수정·삭제 버튼을 화면에 표시한다.
+            ================================================== -->
             {% if request.user == question.author %}
             <div class="my-3">
 
-                <!-- 질문 수정 URL에는 question.id를 전달한다.
-                     클릭하면 question_modify View가 실행된다. -->
+                <!-- 질문 수정 화면으로 이동한다. -->
                 <a href="{% url 'pybo:question_modify' question.id %}"
                    class="btn btn-sm btn-outline-secondary">
                     질문 수정
                 </a>
 
-                <!-- 질문 삭제는 데이터베이스를 변경하는 작업이므로
-                     일반 링크가 아닌 POST 방식의 form을 사용한다.
-
-                     질문이 삭제되면 모델의 CASCADE 설정에 의해
-                     이 질문에 연결된 답변도 모두 삭제된다. -->
+                <!--
+                    질문 삭제는 DB 내용을 변경하는 작업이므로
+                    GET 링크가 아닌 POST 폼으로 요청한다.
+                -->
                 <form method="post"
                       action="{% url 'pybo:question_delete' question.id %}"
                       class="d-inline"
-                      onsubmit="return confirm('질문과 모든 답변이 삭제됩니다. 정말 삭제하시겠습니까?');">
+                      onsubmit="return confirm('정말 질문을 삭제하시겠습니까?');">
 
-                    <!-- 외부 사이트에서 임의로 삭제 요청을 보내는
-                         CSRF 공격을 막기 위한 보안 토큰이다. -->
+                    <!-- 외부 사이트의 위조 요청을 방지하는 보안 토큰 -->
                     {% csrf_token %}
 
                     <button type="submit"
                             class="btn btn-sm btn-outline-danger">
                         질문 삭제
                     </button>
+
                 </form>
 
             </div>
             {% endif %}
 
+
+            <!-- =================================================
+                 2-2. 질문에 등록된 댓글 목록
+
+                 question.comment_set.all:
+                 현재 질문과 연결된 Comment 데이터를 모두 가져온다.
+            ================================================== -->
+            <div class="mt-4">
+
+                {% for comment in question.comment_set.all %}
+                <div class="border-top py-2 text-muted">
+
+                    <!-- 질문 댓글 내용 -->
+                    <span style="white-space: pre-line;">
+                        {{ comment.content }}
+                    </span>
+
+                    <!-- 질문 댓글 작성자와 작성일시 -->
+                    <span class="small">
+                        - {{ comment.author.username }},
+                        {{ comment.create_date }}
+                    </span>
+
+
+                    <!--
+                        현재 로그인한 사용자가 댓글 작성자와 같은 경우에만
+                        댓글 수정·삭제 기능을 표시한다.
+                    -->
+                    {% if request.user == comment.author %}
+
+                    <!-- 질문 댓글 수정 화면으로 이동한다. -->
+                    <a href="{% url 'pybo:comment_modify_question' comment.id %}"
+                       class="small ml-2">
+                        수정
+                    </a>
+
+                    <!-- 질문 댓글 삭제는 POST 방식으로 처리한다. -->
+                    <form method="post"
+                          action="{% url 'pybo:comment_delete_question' comment.id %}"
+                          class="d-inline"
+                          onsubmit="return confirm('질문 댓글을 삭제하시겠습니까?');">
+
+                        {% csrf_token %}
+
+                        <button type="submit"
+                                class="btn btn-link btn-sm p-0">
+                            삭제
+                        </button>
+
+                    </form>
+                    {% endif %}
+
+                </div>
+                {% endfor %}
+
+            </div>
+
+
+            <!-- =================================================
+                 2-3. 질문 댓글 추가 링크
+
+                 로그인한 사용자만 댓글을 작성할 수 있도록 표시한다.
+            ================================================== -->
+            <div class="mt-2">
+
+                {% if request.user.is_authenticated %}
+
+                <a href="{% url 'pybo:comment_create_question' question.id %}"
+                   class="small">
+                    질문 댓글 추가
+                </a>
+
+                {% else %}
+
+                <!-- 로그인하지 않은 사용자는 로그인 화면으로 이동한다. -->
+                <a href="{% url 'common:login' %}?next={{ request.path }}"
+                   class="small">
+                    질문 댓글을 작성하려면 로그인하세요.
+                </a>
+
+                {% endif %}
+
+            </div>
+
         </div>
+        <!-- 질문 card-body 종료 -->
+
     </div>
+    <!-- 질문 카드 종료 -->
 
 
     <!-- =====================================================
-         답변 개수
-         ===================================================== -->
-
-    <!-- question.answer_set은 현재 질문과 연결된 모든 답변이며,
-         count는 연결된 답변의 개수를 반환한다. -->
+         3. 답변 개수 표시 영역
+    ====================================================== -->
     <h5 class="border-bottom my-3 py-2">
         {{ question.answer_set.count }}개의 답변이 있습니다.
     </h5>
 
 
     <!-- =====================================================
-         답변 목록
-         ===================================================== -->
+         4. 답변 목록 반복 영역
 
-    <!-- 현재 질문에 연결된 답변을 한 건씩 answer 변수에 담아 반복한다. -->
+         question.answer_set.all:
+         현재 질문에 등록된 모든 답변을 가져온다.
+
+         반복문 안의 answer는 각각 하나의 답변을 의미한다.
+    ====================================================== -->
     {% for answer in question.answer_set.all %}
+
+    <!-- 답변 카드 시작 -->
     <div class="card my-3">
         <div class="card-body">
 
-            <!-- 현재 반복 중인 답변의 내용을 출력한다. -->
+            <!-- 답변 본문 내용 -->
             <div class="card-text"
                  style="white-space: pre-line;">
                 {{ answer.content }}
             </div>
 
-            <!-- 현재 답변의 작성자와 작성일시를 출력한다. -->
+
+            <!-- 답변 작성자와 작성일시 -->
             <div class="d-flex justify-content-end">
                 <div class="badge badge-light p-2">
 
-                    <!-- Question 작성자가 아니라
-                         현재 Answer 객체의 작성자를 출력한다. -->
+                    <!-- 답변 작성자 -->
                     <div class="mb-2">
                         {{ answer.author.username }}
                     </div>
 
+                    <!-- 답변 작성일시 -->
                     <div>
                         {{ answer.create_date }}
                     </div>
@@ -123,26 +224,27 @@
                 </div>
             </div>
 
-            <!-- 현재 로그인 사용자가 현재 답변의 작성자인 경우에만
-                 답변 수정·삭제 버튼을 표시한다.
 
-                 question.author가 아니라 answer.author와 비교해야 한다. -->
+            <!-- =================================================
+                 4-1. 답변 수정·삭제 버튼 영역
+
+                 반드시 답변 반복문 내부에 있어야 한다.
+                 question.id가 아니라 answer.id를 전달해야 한다.
+            ================================================== -->
             {% if request.user == answer.author %}
             <div class="my-3">
 
-                <!-- 답변 수정 URL에는 question.id가 아닌
-                     현재 답변 번호인 answer.id를 전달해야 한다. -->
+                <!-- 선택한 답변의 수정 화면으로 이동한다. -->
                 <a href="{% url 'pybo:answer_modify' answer.id %}"
                    class="btn btn-sm btn-outline-secondary">
                     답변 수정
                 </a>
 
-                <!-- 답변 삭제 URL에도 answer.id를 전달한다.
-                     이 요청은 선택한 답변 한 건만 삭제한다. -->
+                <!-- 선택한 답변을 POST 방식으로 삭제한다. -->
                 <form method="post"
                       action="{% url 'pybo:answer_delete' answer.id %}"
                       class="d-inline"
-                      onsubmit="return confirm('이 답변만 삭제하시겠습니까?');">
+                      onsubmit="return confirm('정말 답변을 삭제하시겠습니까?');">
 
                     {% csrf_token %}
 
@@ -150,55 +252,229 @@
                             class="btn btn-sm btn-outline-danger">
                         답변 삭제
                     </button>
+
                 </form>
 
             </div>
             {% endif %}
 
+
+            <!-- =================================================
+                 4-2. 현재 답변에 등록된 댓글 목록
+
+                 answer.comment_set.all:
+                 현재 반복 중인 답변과 연결된 댓글만 가져온다.
+            ================================================== -->
+            <div class="mt-4">
+
+                {% for comment in answer.comment_set.all %}
+                <div class="border-top py-2 text-muted">
+
+                    <!-- 답변 댓글 내용 -->
+                    <span style="white-space: pre-line;">
+                        {{ comment.content }}
+                    </span>
+
+                    <!-- 답변 댓글 작성자와 작성일시 -->
+                    <span class="small">
+                        - {{ comment.author.username }},
+                        {{ comment.create_date }}
+                    </span>
+
+
+                    <!--
+                        로그인한 사용자와 댓글 작성자가 같을 때만
+                        댓글 수정·삭제 기능을 표시한다.
+                    -->
+                    {% if request.user == comment.author %}
+
+                    <!-- 답변 댓글 수정 화면으로 이동한다. -->
+                    <a href="{% url 'pybo:comment_modify_answer' comment.id %}"
+                       class="small ml-2">
+                        수정
+                    </a>
+
+                    <!-- 답변 댓글 삭제는 POST 방식으로 처리한다. -->
+                    <form method="post"
+                          action="{% url 'pybo:comment_delete_answer' comment.id %}"
+                          class="d-inline"
+                          onsubmit="return confirm('답변 댓글을 삭제하시겠습니까?');">
+
+                        {% csrf_token %}
+
+                        <button type="submit"
+                                class="btn btn-link btn-sm p-0">
+                            삭제
+                        </button>
+
+                    </form>
+                    {% endif %}
+
+                </div>
+                {% endfor %}
+
+            </div>
+
+
+            <!-- =================================================
+                 4-3. 답변 댓글 추가 링크
+
+                 answer.id를 전달해야 현재 답변에 댓글이 등록된다.
+            ================================================== -->
+            <div class="mt-2">
+
+                {% if request.user.is_authenticated %}
+
+                <a href="{% url 'pybo:comment_create_answer' answer.id %}"
+                   class="small">
+                    답변 댓글 추가
+                </a>
+
+                {% else %}
+
+                <a href="{% url 'common:login' %}?next={{ request.path }}"
+                   class="small">
+                    답변 댓글을 작성하려면 로그인하세요.
+                </a>
+
+                {% endif %}
+
+            </div>
+
         </div>
+        <!-- 답변 card-body 종료 -->
+
     </div>
+    <!-- 답변 카드 종료 -->
+
+    {% empty %}
+
+    <!-- 등록된 답변이 하나도 없을 때 표시한다. -->
+    <div class="alert alert-light border">
+        아직 등록된 답변이 없습니다.
+    </div>
+
     {% endfor %}
+    <!-- 답변 반복 영역 종료 -->
 
 
     <!-- =====================================================
-         새로운 답변 등록 폼
-         ===================================================== -->
+         5. 답변 등록 폼 영역
 
-    <!-- 현재 질문의 ID를 answer_create View로 전달한다.
-         등록된 답변은 이 질문과 연결되어 저장된다. -->
+         입력한 답변 내용은 answer_create 뷰로 POST 전송한다.
+    ====================================================== -->
     <form action="{% url 'pybo:answer_create' question.id %}"
           method="post"
           class="my-3">
 
         {% csrf_token %}
 
-        <!-- 답변 입력값 검증 중 발생한 오류를
-             공통 오류 템플릿을 이용해 출력한다. -->
-        {% include "form_errors.html" %}
 
+        <!-- =================================================
+             5-1. 답변 폼 유효성 검사 오류 출력
+
+             답변을 입력하지 않는 등 폼 검증에 실패하면
+             각 필드의 오류 내용을 화면에 표시한다.
+        ================================================== -->
+        {% if form.errors %}
+        <div class="alert alert-danger"
+             role="alert">
+
+            {% for field in form %}
+
+                {% if field.errors %}
+                <div>
+                    <strong>{{ field.label }}</strong>
+
+                    <!-- 한 필드에서 발생한 모든 오류를 출력한다. -->
+                    {% for error in field.errors %}
+                    <div>
+                        {{ error }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+            {% endfor %}
+
+
+            <!-- 특정 필드가 아닌 폼 전체에서 발생한 오류 -->
+            {% for error in form.non_field_errors %}
+            <div>
+                <strong>{{ error }}</strong>
+            </div>
+            {% endfor %}
+
+        </div>
+        {% endif %}
+
+
+        <!-- =================================================
+             5-2. 답변 입력란
+
+             로그인 여부에 따라 입력 가능 상태를 구분한다.
+        ================================================== -->
         <div class="form-group">
 
-            <!-- 사용자가 새로운 답변 내용을 입력하는 영역이다.
-                 여는 태그와 닫는 태그 사이에 줄바꿈이나 공백을
-                 넣지 않아야 불필요한 공백이 내용으로 전송되지 않는다. -->
+            {% if request.user.is_authenticated %}
+
+            <!--
+                이전 제출에서 오류가 발생한 경우
+                사용자가 작성한 내용을 유지하기 위해
+                form.content.value를 다시 출력한다.
+            -->
             <textarea name="content"
                       id="content"
                       class="form-control"
-                      rows="10"></textarea>
+                      rows="10"
+                      placeholder="답변 내용을 입력하세요.">{{ form.content.value|default_if_none:'' }}</textarea>
+
+            {% else %}
+
+            <!-- 로그인하지 않은 사용자는 답변을 입력할 수 없다. -->
+            <textarea id="content"
+                      class="form-control"
+                      rows="10"
+                      disabled
+                      placeholder="답변을 등록하려면 먼저 로그인하세요."></textarea>
+
+            {% endif %}
+
         </div>
 
-        <!-- 폼 내용을 POST 방식으로 answer_create에 전송한다. -->
-        <input type="submit"
-               value="답변 등록"
-               class="btn btn-primary">
 
-        <!-- 데이터를 저장하지 않고 질문 목록으로 이동한다. -->
+        <!-- =================================================
+             5-3. 답변 등록 및 목록 이동 버튼
+        ================================================== -->
+        {% if request.user.is_authenticated %}
+
+        <button type="submit"
+                class="btn btn-primary">
+            답변 등록
+        </button>
+
+        {% else %}
+
+        <!-- 로그인하지 않은 사용자는 로그인 화면으로 이동한다. -->
+        <a href="{% url 'common:login' %}?next={{ request.path }}"
+           class="btn btn-primary">
+            로그인
+        </a>
+
+        {% endif %}
+
+
+        <!-- 질문 목록 화면으로 돌아간다. -->
         <a href="{% url 'pybo:index' %}"
            class="btn btn-secondary ml-2">
             목록으로
         </a>
 
     </form>
+    <!-- 답변 등록 폼 종료 -->
+
 
 </div>
+<!-- 전체 상세 화면 영역 종료 -->
+
 {% endblock %}
