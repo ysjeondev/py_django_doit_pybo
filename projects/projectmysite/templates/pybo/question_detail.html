@@ -48,7 +48,68 @@
 
                 </div>
             </div>
+            <!-- =================================================
+                 질문 추천 영역
 
+                 추천은 데이터베이스 내용을 변경하는 기능이므로
+                 일반 링크가 아닌 POST 폼으로 요청한다.
+
+                 question.voter.count:
+                 현재 질문을 추천한 사용자의 수를 출력한다.
+            ================================================== -->
+            <div class="my-3">
+
+                {% if request.user.is_authenticated %}
+
+                <!--
+                    로그인한 사용자가 추천 버튼을 누르면
+                    vote_question View로 POST 요청을 보낸다.
+                -->
+                <form method="post"
+                      action="{% url 'pybo:vote_question' question.id %}"
+                      class="d-inline">
+
+                    <!-- CSRF 공격을 방지하기 위한 보안 토큰 -->
+                    {% csrf_token %}
+
+                    <button type="submit"
+                            class="btn btn-sm btn-outline-primary">
+
+                        <!-- 버튼 이름 -->
+                        질문 추천
+
+                        <!-- 현재 질문의 추천 수 -->
+                        <span class="badge badge-primary">
+                            {{ question.voter.count }}
+                        </span>
+
+                    </button>
+
+                </form>
+
+                {% else %}
+
+                <!--
+                    로그인하지 않은 사용자는 추천할 수 없으므로
+                    로그인 화면으로 이동하는 링크를 보여 준다.
+
+                    next={{ request.path }}:
+                    로그인 완료 후 현재 질문 상세 화면으로 돌아온다.
+                -->
+                <a href="{% url 'common:login' %}?next={{ request.path }}"
+                   class="btn btn-sm btn-outline-primary">
+
+                    로그인 후 추천
+
+                    <span class="badge badge-primary">
+                        {{ question.voter.count }}
+                    </span>
+
+                </a>
+
+                {% endif %}
+
+            </div>
 
             <!-- =================================================
                  2-1. 질문 수정·삭제 버튼 영역
@@ -223,7 +284,63 @@
 
                 </div>
             </div>
+            
+            <!-- =================================================
+                 답변 추천 영역
 
+                 현재 반복 중인 answer 객체를 추천한다.
+
+                 answer.voter.count:
+                 현재 답변을 추천한 사용자의 수를 출력한다.
+            ================================================== -->
+            <div class="my-3">
+
+                {% if request.user.is_authenticated %}
+
+                <!--
+                    현재 답변의 ID를 vote_answer URL에 전달한다.
+
+                    주의:
+                    question.id가 아니라 반드시 answer.id를 사용한다.
+                -->
+                <form method="post"
+                      action="{% url 'pybo:vote_answer' answer.id %}"
+                      class="d-inline">
+
+                    {% csrf_token %}
+
+                    <button type="submit"
+                            class="btn btn-sm btn-outline-primary">
+
+                        <!-- 버튼 이름 -->
+                        답변 추천
+
+                        <!-- 현재 답변의 추천 수 -->
+                        <span class="badge badge-primary">
+                            {{ answer.voter.count }}
+                        </span>
+
+                    </button>
+
+                </form>
+
+                {% else %}
+
+                <!-- 로그인하지 않은 사용자는 로그인 화면으로 이동한다. -->
+                <a href="{% url 'common:login' %}?next={{ request.path }}"
+                   class="btn btn-sm btn-outline-primary">
+
+                    로그인 후 추천
+
+                    <span class="badge badge-primary">
+                        {{ answer.voter.count }}
+                    </span>
+
+                </a>
+
+                {% endif %}
+
+            </div>
 
             <!-- =================================================
                  4-1. 답변 수정·삭제 버튼 영역

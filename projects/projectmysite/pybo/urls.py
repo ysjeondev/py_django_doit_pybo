@@ -27,10 +27,11 @@ from django.urls import path
 # answer_views   → pybo/views/answer_views.py
 # comment_views  → pybo/views/comment_views.py
 from .views import (
-    base_views,
-    question_views,
-    answer_views,
-    comment_views,
+    base_views,       # 질문 목록과 질문 상세
+    question_views,   # 질문 등록·수정·삭제
+    answer_views,     # 답변 등록·수정·삭제
+    comment_views,    # 질문·답변 댓글 기능
+    vote_views,       # 질문·답변 추천 기능
 )
 
 
@@ -220,5 +221,55 @@ urlpatterns = [
         'comment/delete/answer/<int:comment_id>/',
         comment_views.comment_delete_answer,
         name='comment_delete_answer',
+    ),
+    
+        # ========================================================
+    # 6. 추천 URL
+    #
+    # 담당 파일:
+    # pybo/views/vote_views.py
+    #
+    # 추천은 데이터베이스 내용을 변경하는 기능이므로
+    # vote_views.py에서 POST 요청만 허용한다.
+    # ========================================================
+
+
+    # --------------------------------------------------------
+    # 질문 추천
+    #
+    # URL 예:
+    # /pybo/vote/question/102/
+    #
+    # <int:question_id>:
+    # 추천할 질문의 번호를 정수로 받아서
+    # vote_question 함수의 question_id 매개변수로 전달한다.
+    #
+    # 템플릿 사용 예:
+    # {% url 'pybo:vote_question' question.id %}
+    # --------------------------------------------------------
+    path(
+        'vote/question/<int:question_id>/',
+        vote_views.vote_question,
+        name='vote_question',
+    ),
+
+
+    # --------------------------------------------------------
+    # 답변 추천
+    #
+    # URL 예:
+    # /pybo/vote/answer/15/
+    #
+    # <int:answer_id>:
+    # 추천할 답변의 번호를 정수로 받아서
+    # vote_answer 함수의 answer_id 매개변수로 전달한다.
+    #
+    # 템플릿 사용 예:
+    # {% url 'pybo:vote_answer' answer.id %}
+    # --------------------------------------------------------
+    path(
+        'vote/answer/<int:answer_id>/',
+        vote_views.vote_answer,
+        name='vote_answer',
     ),
 ]
